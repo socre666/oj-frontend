@@ -1,15 +1,15 @@
 <template>
   <div id="mangeQuestionView"></div>
-  <h2>题目管理</h2>
   <a-table
     :columns="columns"
     :data="dataList"
     :pagination="{
       showTotal: true,
       pageSize: searchParms.pageSize,
-      current: searchParms.pageNum,
+      current: searchParms.current,
       total,
     }"
+    @page-change="onPageChange"
   >
     <template #optional="{ record }">
       <a-space>
@@ -21,19 +21,21 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, ref, watchEffect } from "vue";
 import { Question, QuestionControllerService } from "../../../generated";
 import message from "@arco-design/web-vue/es/message";
-import { useRoute, useRouter } from "vue-router";
+import { useRouter } from "vue-router";
 
 const show = ref(true);
 const dataList = ref([]);
 const total = ref(0);
 const searchParms = ref({
   pageSize: 10,
-  pageNum: 1,
+  //current是当前页号
+  current: 1,
 });
-const lodada = async () => {
+
+const loDada = async () => {
   const res = await QuestionControllerService.listQuestionByPageUsingPost(
     searchParms.value
   );
@@ -45,11 +47,17 @@ const lodada = async () => {
   }
 };
 /**
+ * 监听 searchParams 变量，改变时触发页面的重新加载
+ */
+watchEffect(() => {
+  loDada();
+});
+/**
  * 页面加载时请求数据
  * {id: "1", title: "A+B", content: "题目内容", tags: "["栈","简单"]", answer: "暴力破解", submitNum: 0,…}
  */
 onMounted(() => {
-  lodada();
+  loDada();
 });
 
 const columns = [
@@ -98,10 +106,6 @@ const columns = [
     dataIndex: "createTime",
   },
   {
-    title: "提交数",
-    dataIndex: "submitNum",
-  },
-  {
     title: "操作",
     slotName: "optional",
   },
@@ -115,7 +119,12 @@ const doUpdate = async (question: Question) => {
     },
   });
 };
-
+const onPageChange = (page: number) => {
+  searchParms.value = {
+    ...searchParms.value,
+    current: page,
+  };
+};
 const doDelete = async (question: Question) => {
   const res = await QuestionControllerService.deleteQuestionUsingPost({
     id: question.id,
@@ -123,7 +132,7 @@ const doDelete = async (question: Question) => {
   if (res.code === 0) {
     message.success("删除成功");
     //更新数据
-    lodada();
+    loDada();
   }
 };
 </script>
