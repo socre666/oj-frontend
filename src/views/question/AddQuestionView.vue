@@ -8,11 +8,11 @@
       <a-form-item field="tags" label="标签">
         <a-input-tag v-model="form.tags" placeholder="请选择标签" allow-clear />
       </a-form-item>
-      <a-form-item field="answer" label="答案">
-        <MdEditor />
-      </a-form-item>
       <a-form-item field="content" label="题目内容">
-        <MdEditor />
+        <MdEditor :value="form.content" :handleChange="onContentChange" />
+      </a-form-item>
+      <a-form-item field="answer" label="答案">
+        <MdEditor :value="form.answer" :handleChange="onAnswerChange" />
       </a-form-item>
 
       <a-form-item label="判题配置" :content-flex="false" :merge-props="false">
@@ -91,25 +91,80 @@
       </a-form-item>
 
       <a-form-item>
-        <a-button type="primary" style="min-width: 200px">提交</a-button>
+        <a-button type="primary" style="min-width: 200px" @click="doSubmit"
+          >提交
+        </a-button>
       </a-form-item>
     </a-form>
   </div>
 </template>
 
 <script setup lang="ts">
-import { reactive } from "vue";
+import { onMounted, ref } from "vue";
 import MdEditor from "@/components/MdEditor.vue";
+import { QuestionControllerService } from "../../../generated";
+import message from "@arco-design/web-vue/es/message";
+import { useRoute, useRouter } from "vue-router";
 
-const form = reactive({
+const route = useRoute();
+//如果页面地址包含 update，视为更新页面
+const updatePage = route.path.includes("update");
+const router = useRouter();
+
+/**
+ * 根据题目id获取老的数据
+ */
+const lodData = async () => {
+  const id = route.query.id;
+  if (!id) {
+    return;
+  }
+  const res = await QuestionControllerService.getQuestionByIdUsingGet(
+    id as any
+  );
+  if (res.code === 0) {
+    form.value = res.data as any;
+    //JSON 转 JS 对象
+    if (!form.value.tags) {
+      form.value.tags = [];
+    } else {
+      form.value.tags = JSON.parse(form.value.tags as any);
+    }
+    if (!form.value.judgeConfig) {
+      form.value.judgeConfig = {
+        memoryLimit: 1000,
+        stackLimit: 1000,
+        timeLimit: 1000,
+      };
+    } else {
+      form.value.judgeConfig = JSON.parse(form.value.judgeConfig as any);
+    }
+    if (!form.value.judgeCase) {
+      form.value.judgeCase = [
+        {
+          input: "",
+          output: "",
+        },
+      ];
+    } else {
+      form.value.judgeCase = JSON.parse(form.value.judgeCase as any);
+    }
+  } else {
+    message.error("加载失败" + res.message);
+  }
+};
+onMounted(() => {
+  lodData();
+});
+let form = ref({
   title: "",
   tags: [],
-  answer: "",
   content: "",
+  answer: "",
   judgeConfig: {
-    memoryLimit: 0,
-    stackLimit: 0,
-    timeLimit: 0,
+    memoryLimit: 1000,
+    stackLimit: 1000,
+    timeLimit: 1000,
   },
   judgeCase: [
     {
@@ -118,11 +173,38 @@ const form = reactive({
     },
   ],
 });
+const doSubmit = async () => {
+  if (updatePage) {
+    const res = await QuestionControllerService.updateQuestionUsingPost(
+      form.value
+    );
+    if (res.code === 0) {
+      message.success("更新成功");
+      router.push({
+        path: "/mange/question",
+      });
+    } else {
+      message.error("更新失败" + res.message);
+    }
+  } else {
+    const res = await QuestionControllerService.addQuestionUsingPost(
+      form.value
+    );
+    router.push({
+      path: "/mange/question",
+    });
+    if (res.code === 0) {
+      message.success("创建成功");
+    } else {
+      message.error("创建失败" + res.message);
+    }
+  }
+};
 /**
  * 新增判题用例
  */
 const handleAdd = () => {
-  form.judgeCase.push({
+  form.value.judgeCase.push({
     input: "",
     output: "",
   });
@@ -132,7 +214,13 @@ const handleAdd = () => {
  * @param index
  */
 const handleDelete = (index: number) => {
-  form.judgeCase.splice(index, 1);
+  form.value.judgeCase.splice(index, 1);
+};
+const onContentChange = (value: string) => {
+  form.value.content = value;
+};
+const onAnswerChange = (value: string) => {
+  form.value.answer = value;
 };
 </script>
 
