@@ -1,5 +1,4 @@
 <template>
-  {{ langurage }}
   <div
     id="code-editor"
     ref="codeEditorRef"
@@ -19,7 +18,7 @@ import { languages } from "monaco-editor";
  */
 interface Props {
   value: string;
-  langurage?: string;
+  language?: string;
   handleChange: (v: string) => void;
 }
 
@@ -28,7 +27,7 @@ interface Props {
  */
 const props = withDefaults(defineProps<Props>(), {
   value: () => "",
-  langurage: () => "java",
+  language: () => "java",
   handleChange: (v: string) => {
     console.log(v);
   },
@@ -44,22 +43,14 @@ const codeEditor = ref();
 //   toRaw(codeEditor.value).setValue("新的值");
 // };
 watch(
-  () => props.langurage,
+  () => props.language,
   () => {
-    // Hover on each property to see its docs!
-    codeEditor.value = monaco.editor.create(codeEditorRef.value, {
-      value: props.value,
-      language: props.langurage,
-      automaticLayout: true,
-      minimap: {
-        enabled: true,
-      },
-      // lineNumbers: "off",
-      // roundedSelection: false,
-      // scrollBeyondLastLine: false,
-      readOnly: false,
-      theme: "vs-dark",
-    });
+    if (codeEditor.value) {
+      monaco.editor.setModelLanguage(
+        toRaw(codeEditor.value).getModel(),
+        props.language
+      );
+    }
   }
 );
 onMounted(() => {
@@ -69,7 +60,7 @@ onMounted(() => {
   // Hover on each property to see its docs!
   codeEditor.value = monaco.editor.create(codeEditorRef.value, {
     value: props.value,
-    language: props.langurage,
+    language: props.language,
     automaticLayout: true,
     minimap: {
       enabled: true,

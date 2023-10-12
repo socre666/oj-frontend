@@ -48,13 +48,17 @@
               placeholder="选择编程语言"
             >
               <a-option>java</a-option>
-              <a-option>pthon</a-option>
+              <a-option>python</a-option>
               <a-option>cpp</a-option>
               <a-option>go</a-option>
             </a-select>
           </a-form-item>
         </a-form>
-        <CodeEditor :value="form.code" :language="form.language" />
+        <CodeEditor
+          :value="form.code"
+          :language="form.language"
+          :handleChange="changeCode"
+        />
         <a-divider size="0" />
         <a-button type="primary" style="min-width: 200px" @click="doSubmit">
           提交代码
@@ -69,7 +73,6 @@ import { onMounted, ref, withDefaults, defineProps } from "vue";
 import {
   QuestionControllerService,
   QuestionSubmitAddRequest,
-  QuestionSubmitControllerService,
   QuestionVO,
 } from "../../../generated";
 import message from "@arco-design/web-vue/es/message";
@@ -104,9 +107,13 @@ const form = ref<QuestionSubmitAddRequest>({
  * 提交代码
  */
 const doSubmit = async () => {
-  const res = await QuestionSubmitControllerService.doQuestionSubmitUsingPost(
-    form.value
-  );
+  if (!question.value?.id) {
+    return;
+  }
+  const res = await QuestionControllerService.doQuestionSubmitUsingPost({
+    ...form.value,
+    questionId: question.value.id,
+  });
   if (res.code === 0) {
     message.success("提交成功");
   } else {
@@ -120,6 +127,9 @@ const doSubmit = async () => {
 onMounted(() => {
   loDada();
 });
+const changeCode = (value: string) => {
+  form.value.code = value;
+};
 </script>
 <style>
 #viewQuestionView {
